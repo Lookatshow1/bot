@@ -1,6 +1,7 @@
 """
 Клавиатуры для бота
 """
+from datetime import datetime, timedelta
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
@@ -70,7 +71,7 @@ def get_crm_keyboard() -> InlineKeyboardMarkup:
 def get_insight_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
-        InlineKeyboardButton(text="Показать, что проверять →", callback_data="insight:check")
+        InlineKeyboardButton(text="🔍 Пройти диагностику →", callback_data="insight:check")
     )
     return builder.as_markup()
 
@@ -122,15 +123,71 @@ def get_audit_keywords_keyboard() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+# ============ КАЛЬКУЛЯТОР ============
+
+def get_visitors_keyboard() -> InlineKeyboardMarkup:
+    """Быстрый выбор количества просмотров"""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="~500", callback_data="calc_visitors:500"),
+        InlineKeyboardButton(text="~1000", callback_data="calc_visitors:1000"),
+        InlineKeyboardButton(text="~2000", callback_data="calc_visitors:2000")
+    )
+    builder.row(
+        InlineKeyboardButton(text="~3000", callback_data="calc_visitors:3000"),
+        InlineKeyboardButton(text="~5000", callback_data="calc_visitors:5000"),
+        InlineKeyboardButton(text="Не знаю", callback_data="calc_visitors:1500")
+    )
+    return builder.as_markup()
+
+
+def get_avg_check_keyboard(business_type: str) -> InlineKeyboardMarkup:
+    """Быстрый выбор среднего чека в зависимости от типа бизнеса"""
+    builder = InlineKeyboardBuilder()
+
+    checks = {
+        "beauty": [1500, 2500, 4000, 6000],
+        "clinic": [2000, 4000, 7000, 12000],
+        "fitness": [1500, 3000, 5000, 8000],
+        "other": [1000, 2000, 3500, 5000]
+    }
+
+    values = checks.get(business_type, checks["other"])
+
+    builder.row(
+        InlineKeyboardButton(text=f"~{values[0]}₽", callback_data=f"calc_check:{values[0]}"),
+        InlineKeyboardButton(text=f"~{values[1]}₽", callback_data=f"calc_check:{values[1]}")
+    )
+    builder.row(
+        InlineKeyboardButton(text=f"~{values[2]}₽", callback_data=f"calc_check:{values[2]}"),
+        InlineKeyboardButton(text=f"~{values[3]}₽", callback_data=f"calc_check:{values[3]}")
+    )
+    return builder.as_markup()
+
+
 # ============ РЕЗУЛЬТАТЫ АУДИТА ============
 
 def get_results_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
-        InlineKeyboardButton(text="Хочу увидеть пример", callback_data="results:case")
+        InlineKeyboardButton(text="📞 Записаться на аудит", callback_data="results:meeting")
     )
     builder.row(
-        InlineKeyboardButton(text="Что с этим делать?", callback_data="results:offer")
+        InlineKeyboardButton(text="📋 Посмотреть кейсы", callback_data="results:case")
+    )
+    return builder.as_markup()
+
+
+def get_results_with_bonus_keyboard() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="📞 Записаться на бесплатный аудит", callback_data="results:meeting")
+    )
+    builder.row(
+        InlineKeyboardButton(text="🎁 Получить чек-лист", callback_data="results:bonus")
+    )
+    builder.row(
+        InlineKeyboardButton(text="📋 Посмотреть кейсы", callback_data="results:case")
     )
     return builder.as_markup()
 
@@ -140,7 +197,7 @@ def get_results_keyboard() -> InlineKeyboardMarkup:
 def get_case_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
-        InlineKeyboardButton(text="Хочу так же →", callback_data="case:offer")
+        InlineKeyboardButton(text="📞 Хочу так же →", callback_data="case:meeting")
     )
     builder.row(
         InlineKeyboardButton(text="Ещё примеры", callback_data="case:more")
@@ -151,10 +208,93 @@ def get_case_keyboard() -> InlineKeyboardMarkup:
 def get_case_final_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
-        InlineKeyboardButton(text="Хочу разбор моей точки →", callback_data="case:offer")
+        InlineKeyboardButton(text="📞 Записаться на аудит →", callback_data="case:meeting")
     )
     builder.row(
         InlineKeyboardButton(text="Пока просто наблюдаю", callback_data="case:observe")
+    )
+    return builder.as_markup()
+
+
+# ============ ВЫБОР ВРЕМЕНИ ВСТРЕЧИ ============
+
+def get_meeting_days_keyboard() -> InlineKeyboardMarkup:
+    """Генерация клавиатуры с ближайшими рабочими днями"""
+    builder = InlineKeyboardBuilder()
+
+    today = datetime.now()
+    days_added = 0
+    current_date = today
+
+    # Добавляем 5 ближайших рабочих дней
+    while days_added < 5:
+        current_date += timedelta(days=1)
+        # Пропускаем выходные (5=сб, 6=вс)
+        if current_date.weekday() >= 5:
+            continue
+
+        day_name = {
+            0: "Пн", 1: "Вт", 2: "Ср", 3: "Чт", 4: "Пт"
+        }[current_date.weekday()]
+
+        date_str = current_date.strftime("%d.%m")
+        callback_date = current_date.strftime("%Y-%m-%d")
+
+        builder.row(
+            InlineKeyboardButton(
+                text=f"{day_name}, {date_str}",
+                callback_data=f"meeting_day:{callback_date}"
+            )
+        )
+        days_added += 1
+
+    builder.row(
+        InlineKeyboardButton(text="← Назад", callback_data="meeting:back")
+    )
+
+    return builder.as_markup()
+
+
+def get_meeting_times_keyboard(selected_date: str) -> InlineKeyboardMarkup:
+    """Генерация клавиатуры с доступным временем"""
+    builder = InlineKeyboardBuilder()
+
+    # Доступные слоты (можно настроить)
+    time_slots = [
+        "10:00", "11:00", "12:00",
+        "14:00", "15:00", "16:00", "17:00", "18:00"
+    ]
+
+    # По 3 кнопки в ряд
+    row = []
+    for slot in time_slots:
+        row.append(
+            InlineKeyboardButton(
+                text=slot,
+                callback_data=f"meeting_time:{selected_date}:{slot}"
+            )
+        )
+        if len(row) == 3:
+            builder.row(*row)
+            row = []
+
+    if row:
+        builder.row(*row)
+
+    builder.row(
+        InlineKeyboardButton(text="← Другой день", callback_data="meeting:select_day")
+    )
+
+    return builder.as_markup()
+
+
+def get_meeting_confirm_keyboard() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="✅ Подтвердить", callback_data="meeting:confirm")
+    )
+    builder.row(
+        InlineKeyboardButton(text="🔄 Выбрать другое время", callback_data="meeting:select_day")
     )
     return builder.as_markup()
 
@@ -164,10 +304,31 @@ def get_case_final_keyboard() -> InlineKeyboardMarkup:
 def get_offer_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
-        InlineKeyboardButton(text="Да, посмотреть мою точку →", callback_data="offer:yes")
+        InlineKeyboardButton(text="📞 Выбрать время →", callback_data="offer:meeting")
     )
     builder.row(
         InlineKeyboardButton(text="Пока просто наблюдаю", callback_data="offer:observe")
+    )
+    return builder.as_markup()
+
+
+# ============ БОНУС ============
+
+def get_bonus_keyboard() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="🎁 Получить чек-лист", callback_data="bonus:checklist")
+    )
+    return builder.as_markup()
+
+
+def get_after_bonus_keyboard() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="📞 Записаться на аудит", callback_data="bonus:meeting")
+    )
+    builder.row(
+        InlineKeyboardButton(text="📚 Ещё материалы", callback_data="bonus:content")
     )
     return builder.as_markup()
 
@@ -186,10 +347,13 @@ def get_feedback_keyboard(content_key: str) -> InlineKeyboardMarkup:
 def get_nurture_menu_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
+        InlineKeyboardButton(text="📞 Записаться на аудит", callback_data="nurture:meeting")
+    )
+    builder.row(
         InlineKeyboardButton(text="📚 Полезные материалы", callback_data="nurture:content")
     )
     builder.row(
-        InlineKeyboardButton(text="🔍 Хочу разбор точки", callback_data="nurture:offer")
+        InlineKeyboardButton(text="🎁 Получить чек-лист", callback_data="nurture:bonus")
     )
     return builder.as_markup()
 
@@ -202,9 +366,13 @@ def get_content_list_keyboard(exclude_keys: list = None) -> InlineKeyboardMarkup
 
     for item in NURTURE_CONTENT:
         if item["key"] not in exclude_keys:
+            # Обрезаем название если слишком длинное
+            title = item['title']
+            if len(title) > 35:
+                title = title[:32] + "..."
             builder.row(
                 InlineKeyboardButton(
-                    text=f"📖 {item['title'][:35]}...",
+                    text=f"📖 {title}",
                     callback_data=f"content:{item['key']}"
                 )
             )
@@ -220,13 +388,13 @@ def get_content_list_keyboard(exclude_keys: list = None) -> InlineKeyboardMarkup
 def get_main_menu_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
-        InlineKeyboardButton(text="🔍 Проверить свою карточку", callback_data="menu:audit")
+        InlineKeyboardButton(text="🔍 Пройти диагностику", callback_data="menu:audit")
+    )
+    builder.row(
+        InlineKeyboardButton(text="📞 Записаться на аудит", callback_data="menu:meeting")
     )
     builder.row(
         InlineKeyboardButton(text="📚 Полезные материалы", callback_data="menu:content")
-    )
-    builder.row(
-        InlineKeyboardButton(text="💬 Хочу разбор точки", callback_data="menu:offer")
     )
     return builder.as_markup()
 

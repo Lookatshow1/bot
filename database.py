@@ -20,6 +20,9 @@ async def init_db():
                 audit_green INTEGER DEFAULT 0,
                 city TEXT,
                 business_name TEXT,
+                phone TEXT,
+                meeting_datetime TEXT,
+                bitrix_lead_id INTEGER,
                 is_lead INTEGER DEFAULT 0,
                 stage TEXT DEFAULT 'start',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -72,7 +75,8 @@ async def update_user_field(user_id: int, field: str, value):
     allowed_fields = [
         'business_type', 'locations_count', 'crm_system',
         'audit_score', 'audit_red', 'audit_yellow', 'audit_green',
-        'city', 'business_name', 'is_lead', 'stage'
+        'city', 'business_name', 'phone', 'meeting_datetime',
+        'bitrix_lead_id', 'is_lead', 'stage'
     ]
     if field not in allowed_fields:
         raise ValueError(f"Field {field} not allowed")
